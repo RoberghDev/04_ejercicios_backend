@@ -33,11 +33,16 @@ mongoose
     logger.info("Conexión a MongoDB establecida");
     app.listen(port, () => {
       logger.info(`App levantada con éxito en el puerto ${port}`);
+      logger.info(`-----Servidor local----------------------------------------------------------------`)
       logger.info(`URL usuarios     -> http://localhost:${port}/api/usuarios`);
       logger.info(`URL películas    -> http://localhost:${port}/api/pelis`);
       logger.info(`URL comentarios  -> http://localhost:${port}/api/comentarios`);
       logger.info(`Documentación    -> http://localhost:${port}/api-docs`);
-      
+      logger.info(`-----Servidor en la nube-----------------------------------------------------------`)
+      logger.info(`URL usuarios     -> https://zero4-ejercicios-backend-1.onrender.com/api/usuarios`)
+      logger.info(`URL peículas     -> https://zero4-ejercicios-backend-1.onrender.com/api/peículas`)
+      logger.info(`URL comentarios  -> https://zero4-ejercicios-backend-1.onrender.com/api/comentarios`)
+      logger.info(`Documentación    -> https://zero4-ejercicios-backend-1.onrender.com/api-docs`)
     });
   })
   .catch((error) => {
