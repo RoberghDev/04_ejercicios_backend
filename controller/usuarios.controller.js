@@ -1,5 +1,6 @@
 const Usuario = require("../model/usuario.model");
 const Comentario = require("../model/comentarios.model");
+const UsuariosBBDD = require("../resources/usuarios.db");
 const logger = require("../config/logger");
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
@@ -13,6 +14,21 @@ const showAll = async (_req, res) => {
 	} catch (error) {
 		logger.error(`Error al buscar los usuarios: ${error}`);
 		return res.status(500).send({ mensaje: "No se pudieron buscar los usuarios" });
+	}
+};
+
+// CARGA LOS USUARIOS PREDEFINIDOS EN LA BBDD
+const cargarTodos = async (_req, res) => {
+	try {
+		const resultado = await Usuario.insertMany(UsuariosBBDD);
+		logger.info(`Usuarios cargados correctamente: ${resultado.length}`);
+		return res.status(201).json({
+			mensaje: "Usuarios cargados exitosamente",
+			cantidad: resultado.length,
+		});
+	} catch (error) {
+		logger.error(`Error al cargar los usuarios: ${error}`);
+		return res.status(500).json({ error: "No se pudieron cargar los usuarios" });
 	}
 };
 
@@ -258,6 +274,7 @@ const nuevaPeliculaFavorita = async (req, res) => {
 
 module.exports = {
 	showAll,
+	cargarTodos,
 	findById,
 	signUp,
 	deleteOneById,

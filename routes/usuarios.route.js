@@ -24,6 +24,20 @@ router.get("/ver-todos", usuarioController.showAll);
 
 /**
  * @swagger
+ * /api/usuarios/cargarTodos:
+ *   post:
+ *     summary: Carga los usuarios predefinidos en la base de datos.
+ *     tags: [Usuarios]
+ *     responses:
+ *       "201":
+ *         description: Usuarios cargados correctamente.
+ *       "500":
+ *         description: No se pudieron cargar los usuarios.
+ */
+router.post("/cargarTodos", usuarioController.cargarTodos);
+
+/**
+ * @swagger
  * /api/usuarios/usuario/{idUsuario}:
  *   get:
  *     summary: Busca un usuario por su ID.
