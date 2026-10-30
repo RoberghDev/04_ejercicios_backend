@@ -1,5 +1,6 @@
 const Usuario = require("../model/usuario.model");
 const Comentario = require("../model/comentarios.model");
+const logger = require("../config/logger");
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
@@ -7,9 +8,10 @@ const jwt = require('jsonwebtoken')
 const showAll = async (_req, res) => {
 	try {
 		const resultado = await Usuario.find().select("-password");
+		logger.info(`Usuarios consultados: ${resultado.length}`);
 		return res.status(200).send(resultado);
 	} catch (error) {
-		console.error(`error al buscar los usuarios: ERROR -> ${error}`);
+		logger.error(`Error al buscar los usuarios: ${error}`);
 		return res.status(500).send({ mensaje: "No se pudieron buscar los usuarios" });
 	}
 };
@@ -20,12 +22,14 @@ const findById = async (req, res) => {
 		const resultado = await Usuario.findById(req.params.idUsuario).select("-password");
 
 		if (!resultado) {
+			logger.warn("No se encontró el usuario solicitado");
 			return res.status(404).send({ mensaje: "No se pudo encontrar al usuario" });
 		}
 
+		logger.info("Usuario encontrado");
 		return res.status(200).send(resultado);
 	} catch (error) {
-		console.error(`error al buscar al usuario. ERROR -> ${error}`);
+		logger.error(`Error al buscar al usuario: ${error}`);
 		return res.status(500).json({ error: "No se pudo encontrar al usuario" });
 	}
 };
@@ -43,9 +47,10 @@ const signUp = async (req, res) => {
 		})
 
 		await NuevoUsuario.save()
+		logger.info("Usuario creado correctamente");
 		return res.status(201).send("usuario creado correctamente")
 	} catch (error) {
-		console.log(`error interno: ERROR -> ${error}`)
+		logger.error(`Error interno al crear el usuario: ${error}`);
 		return res.status(500).send(`error interno: ERROR -> ${error}`)
 	}
 };
@@ -58,13 +63,15 @@ const deleteOneById = async (req, res) => {
 		const resultado = await Usuario.findByIdAndDelete(usuarioId);
 
 		if (!resultado) {
+			logger.warn("No se encontró el usuario que se quería eliminar");
 			return res.status(404).send({ mensaje: "El usuario no existe" });
 		}
 
+		logger.info("Usuario eliminado correctamente");
 		return res.status(200).send({ mensaje: "El usuario ha sido eliminado con éxito" });
 
 	} catch (error) {
-		console.error(`error al eliminar un usuario: ERROR -> ${error}`);
+		logger.error(`Error al eliminar un usuario: ${error}`);
 		return res.status(500).send({ mensaje: "Error al eliminar el usuario" });
 	}
 };
@@ -76,6 +83,7 @@ const actualizaUnUsuario = async (req, res) => {
 	const camposActualizables = { username, email };
 
 	if (username === undefined && email === undefined && password === undefined) {
+		logger.warn("Se intentó actualizar un usuario sin proporcionar campos");
 		return res.status(400).send({ mensaje: "Debes indicar algún dato para actualizar" });
 	}
 
@@ -83,6 +91,7 @@ const actualizaUnUsuario = async (req, res) => {
 		!req.usuario ||
 		(String(req.usuario.id) !== idUsuario && !["MOD", "ADMON"].includes(req.usuario.rol))
 	) {
+		logger.warn("Se denegó la actualización del usuario por falta de permisos");
 		return res.status(403).send({ mensaje: "No tienes permiso para actualizar este usuario" });
 	}
 
@@ -95,6 +104,7 @@ const actualizaUnUsuario = async (req, res) => {
 	try {
 		if (password !== undefined) {
 			if (typeof password !== "string" || !password.trim()) {
+				logger.warn("Se intentó actualizar un usuario con una contraseña vacía");
 				return res.status(400).send({ mensaje: "La contraseña no puede estar vacía" });
 			}
 
@@ -108,15 +118,17 @@ const actualizaUnUsuario = async (req, res) => {
 		).select("-password");
 
 		if (!usuarioActualizado) {
+			logger.warn("No se encontró el usuario que se quería actualizar");
 			return res.status(404).send({ mensaje: "El usuario no existe" });
 		}
 
+		logger.info("Usuario actualizado correctamente");
 		return res.status(200).send({
 			mensaje: "Usuario actualizado correctamente",
 			usuario: usuarioActualizado
 		});
 	} catch (error) {
-		console.error(`Error al actualizar el usuario: ${error}`);
+		logger.error(`Error al actualizar el usuario: ${error}`);
 
 		if (error.name === "ValidationError") {
 			return res.status(400).send({ mensaje: "Los datos del usuario no son válidos" });
@@ -137,6 +149,7 @@ const login = async (req, res) => {
 		const esContrasenaCorrecta = usuario ? await bcrypt.compare(req.body.password, usuario.password) : false;
 
 		if (!usuario || !esContrasenaCorrecta) {
+			logger.warn("Intento de inicio de sesión con credenciales incorrectas");
 			return res.status(404).send("error. usuario o contraseña incorrectos")
 		}
 
@@ -151,13 +164,14 @@ const login = async (req, res) => {
 			expiresIn: "2h"
 		})
 
+		logger.info("Inicio de sesión correcto");
 		return res.status(200).json({
 			mensaje: "login correcto",
 			token: token
 		})
 
 	} catch (error) {
-		console.log(`ERROR -> ${error}`);
+		logger.error(`Error al iniciar sesión: ${error}`);
 		res.status(500).send("internal server error")
 	}
 }
@@ -168,17 +182,20 @@ const peliculasFavoritas = async (req, res) => {
 		const usuario = await Usuario.findById(req.params.idUsuario).populate("favoritas")
 
 		if (!usuario) {
+			logger.warn("No se encontró el usuario al consultar sus películas favoritas");
 			return res.status(404).send("usuario no encontrado")
 		} else {
 			if (!usuario.favoritas || usuario.favoritas.length === 0) {
+				logger.warn("El usuario no tiene películas favoritas");
 				return res.status(404).send({ "mensaje": "no se encontraron películas" })
 			}
 		}
 
+		logger.info(`Películas favoritas consultadas: ${usuario.favoritas.length}`);
 		return res.status(200).send({ "mensaje": usuario.favoritas })
 
 	} catch (error) {
-		console.log(`ERROR -> ${error}`);
+		logger.error(`Error al consultar las películas favoritas: ${error}`);
 		return res.status(500).send("internal server error")
 	}
 }
@@ -189,9 +206,14 @@ const verComentarios = async (req, res) => {
 		const comentarios = await Comentario.find({ idUsuario: req.params.idUsuario })
 			.populate("idPelicula");
 
+		if (comentarios.length > 0) {
+			logger.info(`Comentarios del usuario consultados: ${comentarios.length}`);
+		} else {
+			logger.warn("El usuario no tiene comentarios");
+		}
 		return res.status(200).send(comentarios);
 	} catch (error) {
-		console.error(`Error al buscar los comentarios del usuario: ${error}`);
+		logger.error(`Error al buscar los comentarios del usuario: ${error}`);
 		return res.status(500).send({ mensaje: "No se pudieron obtener los comentarios del usuario" });
 	}
 }
@@ -204,6 +226,7 @@ const nuevaPeliculaFavorita = async (req, res) => {
 		!req.usuario ||
 		(String(req.usuario.id) !== idUsuario && !["MOD", "ADMON"].includes(req.usuario.rol))
 	) {
+		logger.warn("Se denegó la modificación de favoritas por falta de permisos");
 		return res.status(403).send({ mensaje: "No tienes permiso para modificar estas favoritas" });
 	}
 
@@ -217,15 +240,17 @@ const nuevaPeliculaFavorita = async (req, res) => {
 			.populate("favoritas");
 
 		if (!usuarioActualizado) {
+			logger.warn("No se encontró el usuario al actualizar sus películas favoritas");
 			return res.status(404).send({ mensaje: "El usuario no existe" });
 		}
 
+		logger.info("Lista de películas favoritas actualizada");
 		return res.status(200).send({
 			mensaje: "Película añadida a favoritas",
 			favoritas: usuarioActualizado.favoritas
 		});
 	} catch (error) {
-		console.error(`Error al añadir película a favoritas: ${error}`);
+		logger.error(`Error al añadir película a favoritas: ${error}`);
 		return res.status(500).send({ mensaje: "No se pudo añadir la película a favoritas" });
 	}
 }
