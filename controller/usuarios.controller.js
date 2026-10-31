@@ -32,24 +32,6 @@ const cargarTodos = async (_req, res) => {
 	}
 };
 
-// FILTRA POR EL ID DEL USUARIO
-const findById = async (req, res) => {
-	try {
-		const resultado = await Usuario.findById(req.params.idUsuario).select("-password");
-
-		if (!resultado) {
-			logger.warn("No se encontró el usuario solicitado");
-			return res.status(404).send({ mensaje: "No se pudo encontrar al usuario" });
-		}
-
-		logger.info("Usuario encontrado");
-		return res.status(200).send(resultado);
-	} catch (error) {
-		logger.error(`Error al buscar al usuario: ${error}`);
-		return res.status(500).json({ error: "No se pudo encontrar al usuario" });
-	}
-};
-
 // CREA UN NUEVO USUARIO
 const signUp = async (req, res) => {
 	try {
@@ -70,6 +52,63 @@ const signUp = async (req, res) => {
 		return res.status(500).send(`error interno: ERROR -> ${error}`)
 	}
 };
+
+// AÑADIR PELÍCULA FAVORITA
+const nuevaPeliculaFavorita = async (req, res) => {
+	const { idUsuario, idPelicula } = req.params;
+
+	if (
+		!req.usuario ||
+		(String(req.usuario.id) !== idUsuario && !["MOD", "ADMON"].includes(req.usuario.rol))
+	) {
+		logger.warn("Se denegó la modificación de favoritas por falta de permisos");
+		return res.status(403).send({ mensaje: "No tienes permiso para modificar estas favoritas" });
+	}
+
+	try {
+		const usuarioActualizado = await Usuario.findByIdAndUpdate(
+			idUsuario,
+			{ $addToSet: { favoritas: idPelicula } },
+			{ new: true }
+		)
+			.select("-password")
+			.populate("favoritas");
+
+		if (!usuarioActualizado) {
+			logger.warn("No se encontró el usuario al actualizar sus películas favoritas");
+			return res.status(404).send({ mensaje: "El usuario no existe" });
+		}
+
+		logger.info("Lista de películas favoritas actualizada");
+		return res.status(200).send({
+			mensaje: "Película añadida a favoritas",
+			favoritas: usuarioActualizado.favoritas
+		});
+	} catch (error) {
+		logger.error(`Error al añadir película a favoritas: ${error}`);
+		return res.status(500).send({ mensaje: "No se pudo añadir la película a favoritas" });
+	}
+}
+
+// FILTRA POR EL ID DEL USUARIO
+const findById = async (req, res) => {
+	try {
+		const resultado = await Usuario.findById(req.params.idUsuario).select("-password");
+
+		if (!resultado) {
+			logger.warn("No se encontró el usuario solicitado");
+			return res.status(404).send({ mensaje: "No se pudo encontrar al usuario" });
+		}
+
+		logger.info("Usuario encontrado");
+		return res.status(200).send(resultado);
+	} catch (error) {
+		logger.error(`Error al buscar al usuario: ${error}`);
+		return res.status(500).json({ error: "No se pudo encontrar al usuario" });
+	}
+};
+
+
 
 // ELIMINA UN USUARIO
 const deleteOneById = async (req, res) => {
@@ -103,9 +142,7 @@ const actualizaUnUsuario = async (req, res) => {
 		return res.status(400).send({ mensaje: "Debes indicar algún dato para actualizar" });
 	}
 
-	if (
-		!req.usuario ||
-		(String(req.usuario.id) !== idUsuario && !["MOD", "ADMON"].includes(req.usuario.rol))
+	if (!req.usuario || (String(req.usuario.id) !== idUsuario && !["MOD", "ADMON"].includes(req.usuario.rol))
 	) {
 		logger.warn("Se denegó la actualización del usuario por falta de permisos");
 		return res.status(403).send({ mensaje: "No tienes permiso para actualizar este usuario" });
@@ -231,43 +268,6 @@ const verComentarios = async (req, res) => {
 	} catch (error) {
 		logger.error(`Error al buscar los comentarios del usuario: ${error}`);
 		return res.status(500).send({ mensaje: "No se pudieron obtener los comentarios del usuario" });
-	}
-}
-
-// AÑADIR PELÍCULA FAVORITA
-const nuevaPeliculaFavorita = async (req, res) => {
-	const { idUsuario, idPelicula } = req.params;
-
-	if (
-		!req.usuario ||
-		(String(req.usuario.id) !== idUsuario && !["MOD", "ADMON"].includes(req.usuario.rol))
-	) {
-		logger.warn("Se denegó la modificación de favoritas por falta de permisos");
-		return res.status(403).send({ mensaje: "No tienes permiso para modificar estas favoritas" });
-	}
-
-	try {
-		const usuarioActualizado = await Usuario.findByIdAndUpdate(
-			idUsuario,
-			{ $addToSet: { favoritas: idPelicula } },
-			{ new: true }
-		)
-			.select("-password")
-			.populate("favoritas");
-
-		if (!usuarioActualizado) {
-			logger.warn("No se encontró el usuario al actualizar sus películas favoritas");
-			return res.status(404).send({ mensaje: "El usuario no existe" });
-		}
-
-		logger.info("Lista de películas favoritas actualizada");
-		return res.status(200).send({
-			mensaje: "Película añadida a favoritas",
-			favoritas: usuarioActualizado.favoritas
-		});
-	} catch (error) {
-		logger.error(`Error al añadir película a favoritas: ${error}`);
-		return res.status(500).send({ mensaje: "No se pudo añadir la película a favoritas" });
 	}
 }
 
